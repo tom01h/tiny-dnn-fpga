@@ -52,7 +52,7 @@
  * You can uncomment this to speedup compilation & linking time,
  * if you don't use network::save / network::load functions.
  **/
-// #define CNN_NO_SERIALIZATION
+#define CNN_NO_SERIALIZATION
 
 /**
  * Enable Image API support.

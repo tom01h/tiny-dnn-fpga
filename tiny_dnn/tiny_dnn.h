@@ -35,6 +35,7 @@
 #include "tiny_dnn/layers/cells.h"
 #include "tiny_dnn/layers/concat_layer.h"
 #include "tiny_dnn/layers/convolutional_layer.h"
+#include "tiny_dnn/layers/dwconvolutional_layer.h"
 #include "tiny_dnn/layers/deconvolutional_layer.h"
 #include "tiny_dnn/layers/dropout_layer.h"
 #include "tiny_dnn/layers/fully_connected_layer.h"
@@ -94,6 +95,8 @@ namespace tiny_dnn {
 namespace layers {
 
 using conv = tiny_dnn::convolutional_layer;
+
+using dwconv = tiny_dnn::dwconvolutional_layer;
 
 using q_conv = tiny_dnn::quantized_convolutional_layer;
 

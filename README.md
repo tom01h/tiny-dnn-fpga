@@ -29,4 +29,12 @@ im2col は on the fly で実行するので、転送データとバッファメ�
 
 ## 実装例2: Separable 畳み込みニューラルネット
 
-実装予定
+実装は ```examples/DW-conv``` で作成中です。課題は MNIST。  
+とりあえずまだソフトだけ。
+
+### 使っている NN モデル
+
+真ん中の2個の conv3x3 は Depthwise Separable Convolution です。
+
+![](examples/DW-conv/model.svg)
+

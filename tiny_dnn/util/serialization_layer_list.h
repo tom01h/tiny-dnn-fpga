@@ -19,6 +19,7 @@ void register_layers(T* h) {
   h->template register_layer<batch_normalization_layer>("batchnorm");
   h->template register_layer<concat_layer>("concat");
   h->template register_layer<convolutional_layer>("conv");
+  h->template register_layer<dwconvolutional_layer>("dwconv");
   h->template register_layer<deconvolutional_layer>("deconv");
   h->template register_layer<dropout_layer>("dropout");
   h->template register_layer<fully_connected_layer>("fully_connected");

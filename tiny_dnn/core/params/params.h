@@ -11,6 +11,7 @@ namespace tiny_dnn {
 namespace core {
 
 class conv_params;
+class dwconv_params;
 class fully_params;
 class maxpool_params;
 class global_avepool_params;
@@ -24,6 +25,7 @@ class Params {
   Params() {}
 
   conv_params &conv();
+  dwconv_params &dwconv();
   fully_params &fully();
   maxpool_params &maxpool();
   global_avepool_params &global_avepool();

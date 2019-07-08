@@ -13,6 +13,7 @@
 
 #include "tiny_dnn/core/framework/device.fwd.h"
 #include "tiny_dnn/core/params/conv_params.h"
+#include "tiny_dnn/core/params/dwconv_params.h"
 
 namespace tiny_dnn {
 namespace core {

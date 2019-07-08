@@ -243,6 +243,32 @@ struct LoadAndConstruct<tiny_dnn::convolutional_layer> {
 };
 
 template <>
+struct LoadAndConstruct<tiny_dnn::dwconvolutional_layer> {
+  template <class Archive>
+  static void load_and_construct(
+    Archive &ar, cereal::construct<tiny_dnn::dwconvolutional_layer> &construct) {
+    size_t w_width, w_height, w_stride, h_stride, w_dilation,
+      h_dilation;
+    bool has_bias;
+    tiny_dnn::shape3d in;
+    tiny_dnn::padding pad_type;
+
+    ::detail::arc(ar, ::detail::make_nvp("in_size", in),
+                  ::detail::make_nvp("window_width", w_width),
+                  ::detail::make_nvp("window_height", w_height),
+                  ::detail::make_nvp("pad_type", pad_type),
+                  ::detail::make_nvp("has_bias", has_bias),
+                  ::detail::make_nvp("w_stride", w_stride),
+                  ::detail::make_nvp("h_stride", h_stride),
+                  ::detail::make_nvp("w_dilation", w_dilation),
+                  ::detail::make_nvp("h_dilation", h_dilation));
+
+    construct(in.width_, in.height_, w_width, w_height, in.depth_,
+              pad_type, has_bias, w_stride, h_stride, w_dilation, h_dilation);
+  }
+};
+
+template <>
 struct LoadAndConstruct<tiny_dnn::deconvolutional_layer> {
   template <class Archive>
   static void load_and_construct(
@@ -807,6 +833,21 @@ struct serialization_buddy {
                   ::detail::make_nvp("window_height", params_.weight.height_),
                   ::detail::make_nvp("out_channels", params_.out.depth_),
                   ::detail::make_nvp("connection_table", params_.tbl),
+                  ::detail::make_nvp("pad_type", params_.pad_type),
+                  ::detail::make_nvp("has_bias", params_.has_bias),
+                  ::detail::make_nvp("w_stride", params_.w_stride),
+                  ::detail::make_nvp("h_stride", params_.w_stride),
+                  ::detail::make_nvp("w_dilation", params_.w_dilation),
+                  ::detail::make_nvp("h_dilation", params_.h_dilation));
+  }
+
+  template <class Archive>
+  static inline void serialize(Archive &ar,
+                               tiny_dnn::dwconvolutional_layer &layer) {
+    auto &params_ = layer.params_;
+    ::detail::arc(ar, ::detail::make_nvp("in_size", params_.in),
+                  ::detail::make_nvp("window_width", params_.weight.width_),
+                  ::detail::make_nvp("window_height", params_.weight.height_),
                   ::detail::make_nvp("pad_type", params_.pad_type),
                   ::detail::make_nvp("has_bias", params_.has_bias),
                   ::detail::make_nvp("w_stride", params_.w_stride),
