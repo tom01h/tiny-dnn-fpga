@@ -5,6 +5,19 @@
     Use of this source code is governed by a BSD-style license that can be found
     in the LICENSE file.
 */
+
+#include <stdint.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/mman.h>
+
+volatile int *dnn_addr;
+volatile int *dma_addr;
+volatile int16_t *src_addr;
+volatile float *dst_addr;
+unsigned long src_phys;
+unsigned long dst_phys;
+
 #include <iostream>
 
 #include <chrono>    // for high_resolution_clock, NOLINT
@@ -69,8 +82,12 @@ static void train_net(const std::string &data_dir_path,
   tiny_dnn::parse_mnist_images(data_dir_path + "/t10k-images.idx3-ubyte",
                                &test_images, -1.0, 1.0, 0, 0);
 
+  //train_labels.resize(3008);
+  //train_images.resize(3008);
   train_labels.resize(20000);
   train_images.resize(20000);
+  //train_labels.resize(32);
+  //train_images.resize(32);
 
   std::cout << "start training" << std::endl;
 
@@ -165,6 +182,65 @@ int main(int argc, char **argv) {
   int minibatch_size                     = 16;
   tiny_dnn::core::backend_t backend_type = tiny_dnn::core::default_engine();
 
+  int fd0,fd1,dma,dnn;
+
+  if ((fd0  = open("/sys/class/udmabuf/udmabuf0/phys_addr", O_RDONLY)) != -1) {
+    char attr[1024];
+    read(fd0, attr, 1024);
+    sscanf(attr, "%lx", &src_phys);
+    close(fd0);
+  }
+  if ((fd0  = open("/sys/class/udmabuf/udmabuf1/phys_addr", O_RDONLY)) != -1) {
+    char attr[1024];
+    read(fd0, attr, 1024);
+    sscanf(attr, "%lx", &dst_phys);
+    close(fd0);
+  }
+
+  /* メモリアクセス用のデバイスファイルを開く */
+  if ((fd0 = open("/dev/udmabuf0", O_RDWR)) < 0) {
+    perror("open");
+    return -1;
+  }
+  if ((fd1 = open("/dev/udmabuf1", O_RDWR)) < 0) {
+    perror("open");
+    return -1;
+  }
+  if ((dma = open("/dev/uio0", O_RDWR | O_SYNC)) < 0) {
+    perror("open");
+    return -1;
+  }
+  if ((dnn = open("/dev/uio1", O_RDWR | O_SYNC)) < 0) {
+    perror("open");
+    return -1;
+  }
+
+  /* ARM(CPU)から見た物理アドレス → 仮想アドレスへのマッピング */
+  dnn_addr = (int*)mmap(NULL, 0x1000, PROT_READ | PROT_WRITE, MAP_SHARED, dnn, 0);
+  if (dnn_addr == MAP_FAILED) {
+    perror("mmap");
+    close(dnn);
+    return -1;
+  }
+  dma_addr = (int*)mmap(NULL, 0x1000, PROT_READ | PROT_WRITE, MAP_SHARED, dma, 0);
+  if (dma_addr == MAP_FAILED) {
+    perror("mmap");
+    close(dma);
+    return -1;
+  }
+  src_addr = (int16_t*)mmap(NULL, 0x00080000, PROT_READ | PROT_WRITE, MAP_SHARED, fd0, 0);
+  if (src_addr == MAP_FAILED) {
+    perror("mmap");
+    close(fd0);
+    return -1;
+  }
+  dst_addr = (float*)mmap(NULL, 0x00080000, PROT_READ | PROT_WRITE, MAP_SHARED, fd1, 0);
+  if (dst_addr == MAP_FAILED) {
+    perror("mmap");
+    close(fd1);
+    return -1;
+  }
+
   if (argc == 2) {
     std::string argname(argv[1]);
     if (argname == "--help" || argname == "-h") {
@@ -191,6 +267,7 @@ int main(int argc, char **argv) {
       return -1;
     }
   }
+
   if (data_path == "") {
     std::cerr << "Data path not specified." << std::endl;
     usage(argv[0]);
