@@ -105,6 +105,8 @@ std::chrono::high_resolution_clock::time_point pst;
 std::chrono::high_resolution_clock::duration pft, pbt;
 std::chrono::high_resolution_clock::time_point cst;
 std::chrono::high_resolution_clock::duration cft, cbt, cdt;
+std::chrono::high_resolution_clock::time_point dst;
+std::chrono::high_resolution_clock::duration dft, dbt, ddt;
 
 
 #include "tiny_dnn/tiny_dnn.h"
