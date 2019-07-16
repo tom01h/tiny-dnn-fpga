@@ -1,6 +1,6 @@
 # tiny-dnn を FPGA で加速する
 
-tiny-dnn の畳み込みレイヤを Zynq の PL 部に作ったアクセラレータ回路にオフロードすることで、CNN の学習を加速します。
+tiny-dnn の各レイヤを Zynq の PL 部に作ったアクセラレータ回路にオフロードすることで、CNN の学習を加速します。
 
 オリジナルの [tiny-dnn のリポジトリ](https://github.com/tiny-dnn/tiny-dnn)
 
@@ -30,7 +30,7 @@ im2col は on the fly で実行するので、転送データとバッファメ�
 ## 実装例2: Separable 畳み込みニューラルネット
 
 実装は ```examples/DW-conv``` で作成中です。課題は MNIST。  
-DW-conv レイヤーのアクセラレータ対応はまだできていません。
+pooling レイヤと DW-conv レイヤーのアクセラレータ対応はまだできていません。
 
 ![](examples/DW-conv/speed.svg)
 

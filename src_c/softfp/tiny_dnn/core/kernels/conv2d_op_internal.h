@@ -66,6 +66,7 @@ inline void conv2d_op_internal(const tensor_t &in_data,
                                const core::conv_params &params,
                                const bool parallelize) {
   cst = std::chrono::high_resolution_clock::now();
+  //  csc = main_time;
 
   size_t out_area    = params.out.area();
   size_t iw          = params.in_padded.width_;
@@ -346,6 +347,7 @@ inline void conv2d_op_internal(const tensor_t &in_data,
   }
 
   cft += std::chrono::high_resolution_clock::now() - cst;
+  //  cfc += main_time - csc;
 }
 
 /******************************************************************/
@@ -373,6 +375,7 @@ void conv2d_op_internal(const tensor_t &prev_out,
   size_t ds          = (iw*ih*id+1)/2;
 
   cst = std::chrono::high_resolution_clock::now();
+  //  csc = main_time;
 
   size_t ina, outa;
 
@@ -604,8 +607,10 @@ void conv2d_op_internal(const tensor_t &prev_out,
   }//if(id!=1)
 
   cbt += std::chrono::high_resolution_clock::now() - cst;
+  //  cbc += main_time - csc;
 
   cst = std::chrono::high_resolution_clock::now();
+  //  csc = main_time;
 
   ss          = (iw*ih*id+3)/4;
   ds          = (kw*kh*id*od+1)/2;
@@ -860,6 +865,7 @@ void conv2d_op_internal(const tensor_t &prev_out,
   eval();
 
   cdt += std::chrono::high_resolution_clock::now() - cst;
+  //  cdc += main_time - csc;
 }
 
 }  // namespace kernels

@@ -87,26 +87,12 @@ inline void conv2d_op_internal(const tensor_t &in_data,
     // Weight transfer
 
     // DMA Buffer
-    size_t ptr=0;
-    for(size_t o=0;o<(od+3)/4;o++){
+    for(size_t o=0;o<od;o++){
+      size_t ptr  =  o   *id*kh*kw;
+      size_t ptr_ = (o/4)*id*kh*kw*4 + (o%4);
       for(size_t i=0;i<id*kh*kw;i++){
-        if((o*4+0)<od){
-          conv16.f = W[(o*4+0)*id*kh*kw+i];
-          src_addr[ptr+0] = conv16.i;
-        }
-        if((o*4+1)<od){
-          conv16.f = W[(o*4+1)*id*kh*kw+i];
-          src_addr[ptr+1] = conv16.i;
-        }
-        if((o*4+2)<od){
-          conv16.f = W[(o*4+2)*id*kh*kw+i];
-          src_addr[ptr+2] = conv16.i;
-        }
-        if((o*4+3)<od){
-          conv16.f = W[(o*4+3)*id*kh*kw+i];
-          src_addr[ptr+3] = conv16.i;
-        }
-        ptr+=4;
+        conv16.f = W[ptr+i];
+        src_addr[ptr_+i*4] = conv16.i;
       }
     }
     __asm__("DSB 15");
@@ -307,27 +293,13 @@ void conv2d_op_internal(const tensor_t &prev_out,
   /////////////////////////////////////////////////////////
   // Weight transfer
   // DMA Buffer
-  size_t ptr=0;
   for(size_t ii=0;ii<od;ii++){        //od-1=veri->id
-    for(size_t o=0;o<(id+3)/4;o++){   //id-1=veri->od
+    for(size_t o=0;o<id;o++){         //id-1=veri->od
+      size_t ptr  = ii*kh*kw*id           +  o   *kh*kw;
+      size_t ptr_ = ii*kh*kw*((id+3)/4*4) + (o/4)*kh*kw*4 + (o%4);
       for(size_t i=0;i<kh*kw;i++){
-        if((o*4+0)<id){
-          conv16.f = W[(o*4+0)*kh*kw+i+ii*kh*kw*id];
-          src_addr[ptr+0] = conv16.i;
-        }
-        if((o*4+1)<id){
-          conv16.f = W[(o*4+1)*kh*kw+i+ii*kh*kw*id];
-          src_addr[ptr+1] = conv16.i;
-        }
-        if((o*4+2)<id){
-          conv16.f = W[(o*4+2)*kh*kw+i+ii*kh*kw*id];
-          src_addr[ptr+2] = conv16.i;
-        }
-        if((o*4+3)<id){
-          conv16.f = W[(o*4+3)*kh*kw+i+ii*kh*kw*id];
-          src_addr[ptr+3] = conv16.i;
-        }
-        ptr+=4;
+        conv16.f = W[ptr+i];
+        src_addr[ptr_+i*4] = conv16.i;
       }
     }
   }
@@ -442,34 +414,15 @@ void conv2d_op_internal(const tensor_t &prev_out,
   // current delta transfer
 
   // DMA Buffer
-  size_t ptr=0;
 
   for(size_t o=0;o<od;o++){
     db[0][o] = 0;
-  }
-  for(size_t o=0;o<(od+3)/4;o++){
+    size_t ptr  =  o   *ow*oh;
+    size_t ptr_ = (o/4)*ow*oh*4 + (o%4);
     for(size_t i=0;i<ow*oh;i++){
-      if((o*4+0)<od){
-        conv16.f = curr_delta[0][(o*4+0)*oh*ow+i];
-        src_addr[ptr+0] = conv16.i;
-        db[0][o*4+0] += conv16.f;
-      }
-      if((o*4+1)<od){
-        conv16.f = curr_delta[0][(o*4+1)*oh*ow+i];
-        src_addr[ptr+1] = conv16.i;
-        db[0][o*4+1] += conv16.f;
-      }
-      if((o*4+2)<od){
-        conv16.f = curr_delta[0][(o*4+2)*oh*ow+i];
-        src_addr[ptr+2] = conv16.i;
-        db[0][o*4+2] += conv16.f;
-      }
-      if((o*4+3)<od){
-        conv16.f = curr_delta[0][(o*4+3)*oh*ow+i];
-        src_addr[ptr+3] = conv16.i;
-        db[0][o*4+3] += conv16.f;
-      }
-      ptr+=4;
+      conv16.f = curr_delta[0][ptr+i];
+      src_addr[ptr_+i*4] = conv16.i;
+      db[0][o] += conv16.f;
     }
   }
   __asm__("DSB 15");
@@ -511,30 +464,13 @@ void conv2d_op_internal(const tensor_t &prev_out,
     if(sample+1<prev_out.size()){
       dnn_addr[0] = 2|4|32; // wwrite|run|deltaw
 
-      ptr=0;
-      for(size_t o=0;o<(od+3)/4;o++){
+      for(size_t o=0;o<od;o++){
+        size_t ptr  =  o   *ow*oh;
+        size_t ptr_ = (o/4)*ow*oh*4 + (o%4);
         for(size_t i=0;i<ow*oh;i++){
-          if((o*4+0)<od){
-            conv16.f = curr_delta[sample+1][(o*4+0)*oh*ow+i];
-            src_addr[ptr+0] = conv16.i;
-            db[0][o*4+0] += conv16.f;
-          }
-          if((o*4+1)<od){
-            conv16.f = curr_delta[sample+1][(o*4+1)*oh*ow+i];
-            src_addr[ptr+1] = conv16.i;
-            db[0][o*4+1] += conv16.f;
-          }
-          if((o*4+2)<od){
-            conv16.f = curr_delta[sample+1][(o*4+2)*oh*ow+i];
-            src_addr[ptr+2] = conv16.i;
-            db[0][o*4+2] += conv16.f;
-          }
-          if((o*4+3)<od){
-            conv16.f = curr_delta[sample+1][(o*4+3)*oh*ow+i];
-            src_addr[ptr+3] = conv16.i;
-            db[0][o*4+3] += conv16.f;
-          }
-          ptr+=4;
+          conv16.f = curr_delta[sample+1][ptr+i];
+          src_addr[ptr_+i*4] = conv16.i;
+          db[0][o] += conv16.f;
         }
       }
       __asm__("DSB 15");

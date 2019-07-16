@@ -108,6 +108,8 @@ std::chrono::high_resolution_clock::time_point cst;
 std::chrono::high_resolution_clock::duration cft, cbt, cdt;
 std::chrono::high_resolution_clock::time_point dst;
 std::chrono::high_resolution_clock::duration dft, dbt, ddt;
+//vluint64_t csc;
+//vluint64_t cfc, cbc, cdc;
 
 
 #include "tiny_dnn/tiny_dnn.h"
@@ -246,6 +248,19 @@ static void train_net(const std::string &data_dir_path,
             << std::chrono::duration_cast<std::chrono::milliseconds>(ddt).count()
             << " ms elapsed"
             << std::endl;
+
+  //  std::cout << "cov forward "
+  //            << (cfc / 1000)
+  //            << " us elapsed"
+  //            << std::endl;
+  //  std::cout << "cov back "
+  //            << (cbc / 1000)
+  //            << " us elapsed"
+  //            << std::endl;
+  //  std::cout << "cov d param "
+  //            << (cdc / 1000)
+  //            << " us elapsed"
+  //            << std::endl;
 
   // test and show results
   nn.test(test_images, test_labels).print_detail(std::cout);
