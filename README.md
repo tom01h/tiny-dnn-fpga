@@ -30,8 +30,7 @@ im2col は on the fly で実行するので、転送データとバッファメ�
 ## 実装例2: Separable 畳み込みニューラルネット
 
 実装は ```examples/DW-conv``` で作成中です。課題は MNIST。  
-とりあえずまだソフトだけ。  
-**モデルの構造を変えたけど、下の説明は追いついていません…**
+DW-conv レイヤーのアクセラレータ対応はまだできていません。
 
 ![](examples/DW-conv/speed.svg)
 
