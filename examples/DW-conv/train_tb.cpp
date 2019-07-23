@@ -53,7 +53,7 @@ sc_signal <sc_uint<10> > wa;
 vluint64_t main_time = 0;
 vluint64_t vcdstart = 0;
 //vluint64_t vcdstart = 500000;
-vluint64_t vcdend = vcdstart + 500000;
+vluint64_t vcdend = vcdstart + 300000;
 
 VerilatedVcdC* tfp;
 Vtiny_dnn_top* verilator_top;
@@ -110,6 +110,8 @@ std::chrono::high_resolution_clock::time_point dst;
 std::chrono::high_resolution_clock::duration dft, dbt, ddt;
 //vluint64_t csc;
 //vluint64_t cfc, cbc, cdc;
+vluint64_t psc;
+vluint64_t pfc;
 
 
 #include "tiny_dnn/tiny_dnn.h"
@@ -261,6 +263,11 @@ static void train_net(const std::string &data_dir_path,
   //            << (cdc / 1000)
   //            << " us elapsed"
   //            << std::endl;
+
+  std::cout << "pool forward "
+            << (pfc / 1000)
+            << " us elapsed"
+            << std::endl;
 
   // test and show results
   nn.test(test_images, test_labels).print_detail(std::cout);

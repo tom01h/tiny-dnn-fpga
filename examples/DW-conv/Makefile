@@ -29,12 +29,19 @@ DESIGN_SRCS = $(addprefix $(FP_DIR)/, \
 tiny_dnn_top.sv \
 tiny_dnn_buf.sv \
 tiny_dnn_core.sv \
+tiny_dnn_pool.sv \
 ) \
 $(addprefix $(SRC_DIR)/, \
 tiny_dnn_control.sv \
 tiny_dnn_ex_ctl.sv \
 loop_lib.sv \
 )
+
+INCLUDE_FILE = \
+$(SRC_DIR)/tiny_dnn_sc_ctl.h \
+../../src_c/hardfp/tiny_dnn/core/kernels/conv2d_op_internal.h \
+../../src_c/softfp/tiny_dnn/core/kernels/dwconv2d_op_internal.h \
+../../src_c/hardfp/tiny_dnn/core/kernels/maxpool_op_internal.h \
 
 else
 
@@ -45,21 +52,22 @@ tiny_dnn_top.sv \
 tiny_dnn_control.sv \
 tiny_dnn_buf.sv \
 tiny_dnn_core.sv \
+tiny_dnn_pool.sv \
 tiny_dnn_ex_ctl.sv \
 loop_lib.sv \
 )
+
+INCLUDE_FILE = \
+$(SRC_DIR)/tiny_dnn_sc_ctl.h \
+../../src_c/softfp/tiny_dnn/core/kernels/conv2d_op_internal.h \
+../../src_c/softfp/tiny_dnn/core/kernels/dwconv2d_op_internal.h \
+../../src_c/softfp/tiny_dnn/core/kernels/maxpool_op_internal.h \
 
 endif
 
 VERILATOR_CPP_TB = \
 $(SRC_DIR)/tiny_dnn_sc_ctl.cpp \
 train_tb.cpp \
-
-INCLUDE_FILE = \
-$(SRC_DIR)/tiny_dnn_sc_ctl.h \
-../../src_c/softfp/tiny_dnn/core/kernels/conv2d_op_internal.h \
-../../src_c/hardfp/tiny_dnn/core/kernels/conv2d_op_internal.h \
-../../src_c/softfp/tiny_dnn/core/kernels/dwconv2d_op_internal.h \
 
 default: $(SIM_DIR)/Vtiny_dnn_top
 

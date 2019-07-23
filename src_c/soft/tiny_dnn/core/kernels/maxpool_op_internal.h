@@ -12,9 +12,6 @@
 
 #include <chrono>    // for high_resolution_clock, NOLINT
 
-int pf=0;
-int pb=0;
-
 namespace tiny_dnn {
 namespace kernels {
 
@@ -57,9 +54,9 @@ inline void maxpool_grad_op_internal(tensor_t &prev_delta,
     const vec_t &curr              = curr_delta[sample];
     const std::vector<size_t> &max = max_idx[sample];
 
-    for (size_t i = 0; i < in2out.size(); i++) {
-      size_t outi = in2out[i];
-      prev[i]     = (max[outi] == i) ? curr[outi] : float_t{0};
+    prev.assign(prev.size(), float_t{0});
+    for (size_t i = 0; i < max.size(); i++) {
+      prev[max[i]] = curr[i];
     }
   });
   pbt += std::chrono::high_resolution_clock::now() - pst;

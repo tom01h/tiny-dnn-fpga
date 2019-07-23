@@ -8,7 +8,8 @@ tiny-dnn の各レイヤを Zynq の PL 部に作ったアクセラレータ回�
 
 畳み込みの行列乗算を 16MAC (bfloat16) で並列に計算して学習を加速します。  
 AXI Stream で 1サンプル分のデータを受け取り、core で畳み込み計算をして、AXI Stream で 1サンプル分の結果を吐き出します。  
-im2col は on the fly で実行するので、転送データとバッファメモリを節約できます。
+im2col は on the fly で実行するので、転送データとバッファメモリを節約できます。  
+[詳しくは](https://github.com/tom01h/tiny-dnn-fpga/blob/master/function.md)
 
 ![](top.svg)
 
@@ -30,7 +31,10 @@ im2col は on the fly で実行するので、転送データとバッファメ�
 ## 実装例2: Separable 畳み込みニューラルネット
 
 実装は ```examples/DW-conv``` で作成中です。課題は MNIST。  
-pooling レイヤと DW-conv レイヤーのアクセラレータ対応はまだできていません。
+pooling レイヤをアクセラレータ対応中です。  
+DW-conv レイヤーのアクセラレータ対応はまだできていません。
+
+
 
 ![](examples/DW-conv/speed.svg)
 

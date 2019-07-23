@@ -8,6 +8,7 @@ module tiny_dnn_top
    input wire         run,
    input wire         wwrite,
    input wire         bwrite,
+   input wire         pool,
    input wire         last,
 
    output wire        sc_s_init,
@@ -57,6 +58,8 @@ module tiny_dnn_top
    wire               s_init;
    wire               s_fin;
    wire               out_busy;
+   wire               p_fin;
+   wire               pool_busy;
 
    // sample control -> core
    wire               k_init;
@@ -92,16 +95,19 @@ module tiny_dnn_top
    wire               signo [0:f_num];
    wire signed [9:0]  expo [0:f_num];
    wire signed [31:0] addo [0:f_num];
-
+   wire [15:0]        pool_out;
+   wire [15:0]        pool_ptr;
 
    batch_ctrl batch_ctrl
      (
       .clk(clk),
       .s_init(s_init),
       .s_fin(s_fin),
+      .p_fin(p_fin),
       .backprop(backprop),
       .deltaw(deltaw),
       .run(run),
+      .pool(pool),
       .wwrite(wwrite),
       .bwrite(bwrite),
       .last(last),
@@ -153,22 +159,29 @@ module tiny_dnn_top
       .dst_a({outp,dst_a[11:0]}),
       .dst_d0(dst_data0),
       .dst_d1(dst_data1),
+      .pool(pool),
       .outr(outr),
       .accr(accr),
       .oa({execp,oa[11:0]}),
       .signo(signo[0]),
       .expo(expo[0]),
-      .addo(addo[0])
+      .addo(addo[0]),
+      .po(pool_out),
+      .pp(pool_ptr)
       );
 
    out_ctrl out_ctrl
      (
       .clk(clk),
-      .rst(~run),
+      .rst(~(run|pool)),
       .dst_acc(dst_acc),
       .s_init(s_init),
       .k_init(k_init),
       .k_fin(k_fin),
+      .p_fin(p_fin),
+      .pool(pool),
+      .pool_busy(pool_busy),
+      .src_valid(src_valid),
       .out_busy(out_busy),
       .od(od[3:0]),
       .os(os[9:0]),
@@ -223,6 +236,22 @@ module tiny_dnn_top
       .kh(kh),
       .kw(kw),
       .rst(~run)
+      );
+
+   tiny_dnn_pool tiny_dnn_pool
+     (
+      .clk(clk),
+      .pool(pool),
+      .p_fin(p_fin),
+      .en(pool&src_valid),
+      .ow(ow),
+      .d0(src_data0),
+      .d1(src_data1),
+      .d2(src_data2),
+      .d3(src_data3),
+      .pool_busy(pool_busy),
+      .po(pool_out),
+      .pp(pool_ptr)
       );
 
    assign signo[f_num] = 0;

@@ -77,12 +77,15 @@ module dst_buf
    input wire [12:0]        dst_a,
    output wire [31:0]       dst_d0,
    output wire [31:0]       dst_d1,
+   input wire               pool,
    input wire               outr,
    input wire               accr,
    input wire [12:0]        oa,
    input wire               signo,
    input wire signed [9:0]  expo,
-   input wire signed [31:0] addo
+   input wire signed [31:0] addo,
+   input wire [15:0]        po,
+   input wire [15:0]        pp
    );
 
    reg [31:0]        buff00 [0:2047];
@@ -112,27 +115,29 @@ module dst_buf
 
    wire [10:0]      ra = (accr) ? oa[11:1] : dst_a[10:0];
 
+   wire [31:0]      wd0 = (pool) ? {po,pp} : nrm;
+
    always_ff @(posedge clk)
      if(outr5&~oa5[12]&~oa5[0])
-       buff00[oa5[11:1]] <= nrm;
+       buff00[oa5[11:1]] <= wd0;
      else if((accr& oa[12]&~oa[0])|(dst_v&~dst_a[12]))
        dst_d00 <= buff00[ra];
 
    always_ff @(posedge clk)
      if(outr5&~oa5[12]& oa5[0])
-       buff01[oa5[11:1]] <= nrm;
+       buff01[oa5[11:1]] <= wd0;
      else if((accr& oa[12]& oa[0])|(dst_v&~dst_a[12]))
        dst_d10 <= buff01[ra];
 
    always_ff @(posedge clk)
      if(outr5& oa5[12]&~oa5[0])
-       buff10[oa5[11:1]] <= nrm;
+       buff10[oa5[11:1]] <= wd0;
      else if((accr&~oa[12]&~oa[0])|(dst_v& dst_a[12]))
        dst_d01 <= buff10[ra];
 
    always_ff @(posedge clk)
      if(outr5& oa5[12]& oa5[0])
-       buff11[oa5[11:1]] <= nrm;
+       buff11[oa5[11:1]] <= wd0;
      else if((accr&~oa[12]& oa[0])|(dst_v& dst_a[12]))
        dst_d11 <= buff11[ra];
 

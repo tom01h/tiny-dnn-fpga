@@ -47,14 +47,20 @@ module dst_buf
    input wire [12:0] dst_a,
    output real       dst_d0,
    output real       dst_d1,
+   output reg [15:0] dst_p0,
+   output reg [15:0] dst_p1,
+   input wire        pool,
    input wire        outr,
    input wire        accr,
    input wire [12:0] oa,
-   input real        sum
+   input real        sum,
+   input real        po,
+   input wire [15:0] pp
    );
 
    real              buff0 [0:4095];
    real              buff1 [0:4095];
+   reg [15:0]        ptr0 [0:4095];
 
    reg               accr2,    outr4, outr5;
    reg [12:0]        oa2, oa3, oa4,   oa5;
@@ -75,9 +81,26 @@ module dst_buf
    assign dst_d0 = (dst_a[12]) ? dst_d01 : dst_d00;
    assign dst_d1 = (dst_a[12]) ? dst_d11 : dst_d10;
 
+   real wd0;
+   always_comb begin
+      if(pool)
+        wd0 = po;
+      else
+        wd0 = x5 + y5;
+   end
+
+   always_ff @(posedge clk)begin
+      if(pool&outr5)begin
+         ptr0[oa5[11:0]] <= pp;
+      end else if(pool&dst_v)begin
+         dst_p0 <= ptr0[{dst_a[10:0],1'd0}];
+         dst_p1 <= ptr0[{dst_a[10:0],1'd1}];
+      end
+   end
+
    always_ff @(posedge clk)begin
       if(outr5&~oa5[12])begin
-         buff0[oa5[11:0]] <= x5 + y5;
+         buff0[oa5[11:0]] <= wd0;
       end else if(accr&oa[12])begin
          y20 <= buff0[oa[11:0]];
       end else if(dst_v&~dst_a[12])begin
@@ -87,7 +110,7 @@ module dst_buf
    end
    always_ff @(posedge clk)begin
       if(outr5&oa5[12])begin
-         buff1[oa5[11:0]] <= x5 + y5;
+         buff1[oa5[11:0]] <= wd0;
       end else if(accr&~oa[12])begin
          y21 <= buff1[oa[11:0]];
       end else if(dst_v&dst_a[12])begin

@@ -3,9 +3,11 @@ module batch_ctrl
    input wire         clk,
    output reg         s_init,
    input wire         s_fin,
+   input wire         p_fin,
    input wire         backprop,
    input wire         deltaw,
    input wire         run,
+   input wire         pool,
    input wire         wwrite,
    input wire         bwrite,
    input wire         last,
@@ -36,9 +38,10 @@ module batch_ctrl
    input wire [9:0]   ks
    );
 
-   assign inp  = ~execp;
-   assign outp = ~execp;
+   assign inp  = execp ^ run; // ^run pool use ONLY bank1
+   assign outp = execp ^ run;
 
+   wire               runpl = run|pool;
    wire               den = dst_ready;
 
    reg [1:0]          src_en;
@@ -46,8 +49,8 @@ module batch_ctrl
    reg                s_fin_h;
 
    wire               s_fin0;
-   wire               s_fin_in = (s_fin0 | s_fin_h) & (src_en[inp] | last) & den;
-   dff #(.W(1)) d_s_fin0 (.in(s_fin), .data(s_fin0), .clk(clk), .rst(~run), .en(1'b1));
+   wire               s_fin_in = (s_fin0 | s_fin_h) & (src_en[inp] | last | pool) & den;
+   dff #(.W(1)) d_s_fin0 (.in(s_fin|p_fin), .data(s_fin0), .clk(clk), .rst(~runpl), .en(1'b1));
 
    always @(posedge clk)begin
       if(~run)begin
@@ -59,18 +62,23 @@ module batch_ctrl
       if(~run)begin
          s_init <= 1'b0;
          execp <= 1'b1;
-         s_fin_h <= 1'b0;
       end else if(src_fin & src_en[1:0]==2'b00)begin
          s_init <= 1'b1;
          execp <= ~execp;
       end else if(s_fin_in)begin
          s_init <= ~last;
          execp <= ~execp;
+      //end else if(s_fin0)begin
+      end else begin
+         s_init <= 1'b0;
+      end
+
+      if(~runpl)begin
+         s_fin_h <= 1'b0;
+      end else if(s_fin_in)begin
          s_fin_h <= 1'b0;
       end else if(s_fin0)begin
          s_fin_h <= 1'b1;
-      end else begin
-         s_init <= 1'b0;
       end
 
       if(~run)begin
@@ -94,17 +102,17 @@ module batch_ctrl
    wire              dst_v0;
    wire              dst_v0_in = s_fin_in&dst_run | dst_v0&!last_da;
 
-   dff #(.W(1)) d_dstart0 (.in(s_fin_in&dst_run), .data(dstart0), .clk(clk), .rst(~run), .en(den));
-   dff #(.W(1)) d_dst_v0 (.in(dst_v0_in), .data(dst_v0), .clk(clk), .rst(~run), .en(den));
+   dff #(.W(1)) d_dstart0 (.in(s_fin_in&dst_run), .data(dstart0), .clk(clk), .rst(~runpl), .en(den));
+   dff #(.W(1)) d_dst_v0 (.in(dst_v0_in), .data(dst_v0), .clk(clk), .rst(~runpl), .en(den));
 
    assign dstart = den&dstart0;
 
    loop1 #(.W(12)) l_da(.ini(12'd0), .fin(ds),  .data(da), .start(dstart),  .last(last_da),
-                        .clk(clk),   .rst(~run),            .next(next_da),   .en(den) );
+                        .clk(clk),   .rst(~runpl),          .next(next_da),   .en(den) );
 
    assign dst_a = da;
    assign dst_v = dst_v0 & dst_ready;
-   dff #(.W(1)) d_dst_valid (.in(dst_v0), .data(dst_valid), .clk(clk), .rst(~run), .en(den));
+   dff #(.W(1)) d_dst_valid (.in(dst_v0), .data(dst_valid), .clk(clk), .rst(~runpl), .en(den));
 
 ////////////////////// src_v, src_a /// s_init, src_ready ///////
 
@@ -168,6 +176,10 @@ module out_ctrl
    output reg        out_busy,
    input wire        k_init,
    input wire        k_fin,
+   output wire       p_fin,
+   input wire        pool,
+   input wire        pool_busy,
+   input wire        src_valid,
    input wire [3:0]  od,
    input wire [9:0]  os,
    output reg        outr,
@@ -187,6 +199,9 @@ module out_ctrl
    reg                        last_ct0;
    reg               outr0, outr1;
    reg               update0, update1;
+
+   reg               p_fin0;
+   assign p_fin = p_fin0 & ~pool_busy;
 
    assign accr = outr0&dst_acc;
    wire start = k_fin&!outr00|last_ct0&out_busy1;
@@ -213,10 +228,19 @@ module out_ctrl
       end else if(last_ct)begin
          outr00 <= 1'b0;
       end
+      if(rst)begin
+         p_fin0 <= 1'b0;
+      end else if(pool&last_wi)begin
+         p_fin0 <= 1'b1;
+      end else if(~pool_busy)begin
+         p_fin0 <= 1'b0;
+      end
    end
 
-   loop1 #(.W(10)) l_wi(.ini(10'd0), .fin(os-1),.data(wi), .start(s_init),  .last(last_wi),
-                        .clk(clk),   .rst(rst),             .next(next_wi),   .en(last_ct)  );
+   wire pool_en = pool&src_valid;
+
+   loop1 #(.W(10)) l_wi(.ini(10'd0), .fin(os-1),.data(wi), .start(s_init|pool), .last(last_wi),
+                        .clk(clk),   .rst(rst),             .next(next_wi),     .en(last_ct|pool_en)  );
 
    loop1 #(.W(4))  l_ct(.ini(4'd0),  .fin(od),  .data(ct), .start(start),   .last(last_ct),
                         .clk(clk),   .rst(rst),             .next(next_ct),   .en(1'b1)  );
@@ -229,7 +253,7 @@ module out_ctrl
          last_ct0 <= 1'b0;
       end else begin
          oa <= ct*os+wi;
-         outr <= outr1;     outr1 <= outr0;     outr0 <= outr00|start;
+         outr <= outr1;     outr1 <= outr0;     outr0 <= outr00|start|pool_en;
          outrf <= outr1&~outr0;
          update <= update1; update1 <= update0; update0 <= start;
          last_ct0 <= last_ct;
