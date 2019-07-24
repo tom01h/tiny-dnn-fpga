@@ -8,7 +8,7 @@
 #### 手動でやるなら
 
 1. サンプルデザイン ```mys-xc7z020-trd``` のブロックデザインを開いて Zynq 以外を消す。*
-2. Vivado で tiny_dnn アクセラレータのファイル （```src_fpga/tiny_dnn_top.v, tiny_dnn_reg.v``` と ```src_fp/tiny_dnn_buf.sv, tiny_dnn_core.sv``` と ```src/tiny_dnn_control.sv,tiny_dnn_ex_ctl.sv, loop_lib.sv``` ）を開く
+2. Vivado で tiny_dnn アクセラレータのファイル （```src_fpga/tiny_dnn_top.v, tiny_dnn_reg.v``` と ```src_fp/tiny_dnn_buf.sv, tiny_dnn_core.sv, tiny_dnn_pool.sv``` と ```src/tiny_dnn_control.sv,tiny_dnn_ex_ctl.sv, loop_lib.sv``` ）を開く
 3. ブロックデザインの中に ```tiny_dnn_top``` を RTLモジュールとして追加する
 4. ほかの部品を ```design_1.pdf``` を参考に追加して結線する
 5. PL のクロックは 100MHz (METしないけど…)

@@ -11,7 +11,7 @@ module tiny_dnn_pool
    input wire [15:0] d3,
    output wire       pool_busy,
    output reg [15:0] po,
-   output reg [15:0] pp 
+   output reg [15:0] pp
    );
 
    reg               en1, en2, en3, en4;
@@ -24,8 +24,8 @@ module tiny_dnn_pool
 
    reg [4:0]         px;
    reg [15:1]        pa;
-   
-   always_ff @(posedge clk)begin   
+
+   always_ff @(posedge clk)begin
       if(~pool|p_fin)begin
          pa <= 15'd0;
          px <= 5'd0;
@@ -40,7 +40,7 @@ module tiny_dnn_pool
       end
    end
 
-   always_ff @(posedge clk)begin   
+   always_ff @(posedge clk)begin
       if(~pool)begin
          en1 <= 1'b0;
          en2 <= 1'b0;
@@ -67,14 +67,14 @@ module tiny_dnn_pool
          end else begin
             o20 <= o11;
             p20 <= 2'd2;
-         end              
+         end
          if((o12>o13)^(o12[15]|o13[15]))begin
             o21 <= o12;
             p21 <= 2'd1;
          end else begin
             o21 <= o13;
             p21 <= 2'd3;
-         end              
+         end
       end
       if(en2)begin
          pa3 <= pa2;
@@ -84,7 +84,7 @@ module tiny_dnn_pool
          end else begin
             o3 <= o21;
             p3 <= p21;
-         end              
+         end
       end
       if(en3)begin
          pa4 <= pa3;

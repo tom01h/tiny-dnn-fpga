@@ -5,12 +5,26 @@
     Use of this source code is governed by a BSD-style license that can be found
     in the LICENSE file.
 */
+
+extern volatile int *dnn_addr;
+extern volatile int *dma_addr;
+extern volatile int16_t *src_addr;
+extern volatile float *dst_addr;
+extern unsigned long src_phys;
+extern unsigned long dst_phys;
+
 #pragma once
 
 #include <limits>
 #include <vector>
 
 #include <chrono>    // for high_resolution_clock, NOLINT
+
+//void dma_reset(){
+//  dma_addr[0x30/4] = 4;
+//  dma_addr[0x00/4] = 4;
+//  while (dma_addr[0x00/4] & 0x4);
+//}
 
 union{
   struct{
@@ -33,91 +47,78 @@ inline void maxpool_op_internal(const tensor_t &in_data,
                                 core::maxpool_params &params,
                                 const bool layer_parallelize) {
   pst = std::chrono::high_resolution_clock::now();
-  psc = main_time;
 
   if((params.pool_size_x==2)&&(params.pool_size_y==2)&&
      (params.stride_x   ==2)&&(params.stride_y   ==2)&&
-     (in_data.size() != 1)){
-    //(in_data.size() != 1)&&0){
+     (in_data.size() > 1)  ){
 
     size_t ow          = params.out.width_;
     size_t oh          = params.out.height_;
     size_t od          = params.out.depth_;
 
-    eval();
-    verilator_top->od =  0;
-    verilator_top->ow =  ow;
-    verilator_top->os =  ow*oh*od;      //even number
-    verilator_top->ds = (ow*oh*od)/2-1;
-    verilator_top->pool = 1;
-    verilator_top->dst_ready = 1;
-    eval();
-    eval();
+    dnn_addr[10] = (ow*oh*od)/2-1; //ds
+    dnn_addr[11] = 0;              //od
+    dnn_addr[12] = ow*oh*od;       //os
+    dnn_addr[13] = oh;             //oh
+    dnn_addr[14] = ow;             //ow
+
+    dnn_addr[0] = 0;   // init
+    dnn_addr[0] = 128; // pool
 
     for(size_t sample = 0; sample < in_data.size(); sample++){
       const vec_t &in          = in_data[sample];
       vec_t &out               = out_data[sample];
       std::vector<size_t> &max = params.out2inmax[sample];
 
-      verilator_top->src_valid = 1;
-      for(size_t c = 0; c < od; c++){
-        for(size_t y = 0; y < oh; y++){
-          for(size_t x = 0; x < ow; x++){
-            float_t max_value;
-            size_t idx;
-            size_t idx0 = c*oh*ow*4 + (y*2+0)*ow*2 + x*2;
-            size_t idx1 = c*oh*ow*4 + (y*2+1)*ow*2 + x*2;
-            conv16p.f = in[idx0+0];
-            verilator_top->src_data0 = conv16p.i;
-            conv16p.f = in[idx1+0];
-            verilator_top->src_data1 = conv16p.i;
-            conv16p.f = in[idx0+1];
-            verilator_top->src_data2 = conv16p.i;
-            conv16p.f = in[idx1+1];
-            verilator_top->src_data3 = conv16p.i;
-            /*
-            if(in[idx1+0]>in[idx0+0]){
-              max_value = in[idx1+0];
-              idx = idx1+0;
-            }else{
-              max_value = in[idx0];
-              idx = idx0;
-            }
-            if(in[idx0+1]>max_value){
-              max_value = in[idx0+1];
-              idx = idx0+1;
-            }
-            if(in[idx1+1]>max_value){
-              max_value = in[idx1+1];
-              idx = idx1+1;
-            }
-            max[c*oh*ow + y*ow + x] = idx;
-            out[c*oh*ow + y*ow + x] = max_value;
-            */
-            eval();
-          }
+      size_t idxs = 0;
+      size_t idxd = 0;
+      for(size_t cy = 0; cy < od*oh*2; cy++){
+        for(size_t x = 0; x < ow*2; x++){
+          conv16p.f = in[idxs+x];
+          src_addr[idxd+x*2] = conv16p.i;
+        }
+        idxs += ow*2;
+        if(cy%2){
+          idxd += ow*2*2-1;
+        }else{
+          idxd ++;
         }
       }
-      verilator_top->src_valid = 0;
-      eval();
-      while(!verilator_top->dst_valid){
-        eval();
-      }
-      for(int i=0; verilator_top->dst_valid;){
-        convp.i = verilator_top->dst_data0 & 0xffff0000;
-        max[i] = verilator_top->dst_data0 & 0x0000ffff;
-        out[i++] = convp.f;
+      __asm__("DSB 15");
 
-        convp.i = verilator_top->dst_data1 & 0xffff0000;
-        max[i] = verilator_top->dst_data1 & 0x0000ffff;
-        out[i++] = convp.f;
+      // AXI DMA transfer tx rx
+      dma_reset();
+      dma_addr[0x30/4] = 1;
+      dma_addr[0x48/4] = dst_phys;
+      dma_addr[0x58/4] = ow*oh*od*4;
+      dma_addr[0x00/4] = 1;
+      dma_addr[0x18/4] = src_phys;
+      dma_addr[0x28/4] = ow*2*oh*2*od*2;
 
-        eval();
+      // Wait for the tx to finish
+      while ((dma_addr[0x04/4] & 0x1000)!=0x1000);
+
+      // Wait for the rx to finish
+      while ((dma_addr[0x34/4] & 0x1000)!=0x1000) ;
+
+      __asm__("DSB 15");
+      for(int i=0; i<ow*oh*od;){
+        convp.f = dst_addr[i];
+        max[i]  = convp.i & 0x0000ffff;
+        convp.i = convp.i & 0xffff0000;
+        out[i] = convp.f;
+        i++;
+
+        convp.f = dst_addr[i];
+        max[i]  = convp.i & 0x0000ffff;
+        convp.i = convp.i & 0xffff0000;
+        out[i] = convp.f;
+        i++;
       }
     }
-    verilator_top->pool = 0;
-    verilator_top->dst_ready = 0;
-    eval();
+
+    dnn_addr[0] = 0;   // idle
+
   }else{
     for_i(layer_parallelize, in_data.size(), [&](size_t sample) {
         const vec_t &in          = in_data[sample];
@@ -140,7 +141,6 @@ inline void maxpool_op_internal(const tensor_t &in_data,
       });
   }
   pft += std::chrono::high_resolution_clock::now() - pst;
-  pfc += main_time - psc;
 }
 
 inline void maxpool_grad_op_internal(tensor_t &prev_delta,

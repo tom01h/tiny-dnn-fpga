@@ -37,6 +37,10 @@ inline void maxpool_op_internal(const tensor_t &in_data,
     size_t od          = params.out.depth_;
 
     eval();
+    verilator_top->od =  0;
+    verilator_top->ow =  ow;
+    verilator_top->os =  ow*oh*od;      //even number
+    verilator_top->ds = (ow*oh*od)/2-1;
     verilator_top->pool = 1;
     verilator_top->dst_ready = 1;
     eval();
@@ -46,11 +50,6 @@ inline void maxpool_op_internal(const tensor_t &in_data,
       const vec_t &in          = in_data[sample];
       vec_t &out               = out_data[sample];
       std::vector<size_t> &max = params.out2inmax[sample];
-
-      verilator_top->od =  0;
-      verilator_top->ow =  ow;
-      verilator_top->os =  ow*oh*od;      //even number
-      verilator_top->ds = (ow*oh*od)/2-1;
 
       verilator_top->src_valid = 1;
       for(size_t c = 0; c < od; c++){

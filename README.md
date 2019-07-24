@@ -31,7 +31,7 @@ im2col は on the fly で実行するので、転送データとバッファメ�
 ## 実装例2: Separable 畳み込みニューラルネット
 
 実装は ```examples/DW-conv``` で作成中です。課題は MNIST。  
-pooling レイヤをアクセラレータ対応中です。  
+普通の convolution と pooling レイヤをアクセラレータ対応済みです。  
 DW-conv レイヤーのアクセラレータ対応はまだできていません。
 
 
