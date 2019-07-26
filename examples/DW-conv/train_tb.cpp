@@ -110,8 +110,10 @@ std::chrono::high_resolution_clock::time_point dst;
 std::chrono::high_resolution_clock::duration dft, dbt, ddt;
 //vluint64_t csc;
 //vluint64_t cfc, cbc, cdc;
-vluint64_t psc;
-vluint64_t pfc;
+//vluint64_t psc;
+//vluint64_t pfc;
+vluint64_t  dsc;
+vluint64_t  dfc, dbc, ddc;
 
 
 #include "tiny_dnn/tiny_dnn.h"
@@ -264,8 +266,13 @@ static void train_net(const std::string &data_dir_path,
   //            << " us elapsed"
   //            << std::endl;
 
-  std::cout << "pool forward "
-            << (pfc / 1000)
+  //  std::cout << "pool forward "
+  //            << (pfc / 1000)
+  //            << " us elapsed"
+  //            << std::endl;
+
+  std::cout << "dwcov forward "
+            << (dfc / 1000)
             << " us elapsed"
             << std::endl;
 

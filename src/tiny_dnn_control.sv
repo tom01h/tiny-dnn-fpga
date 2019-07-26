@@ -6,6 +6,7 @@ module batch_ctrl
    input wire         p_fin,
    input wire         backprop,
    input wire         deltaw,
+   input wire         dwconv,
    input wire         run,
    input wire         pool,
    input wire         wwrite,
@@ -129,7 +130,6 @@ module batch_ctrl
                         .clk(clk),   .rst(~src_ready|~run), .next(next_sa),   .en(sen) );
    assign src_a = sa;
    assign src_v = run & src_valid & src_ready & ~wwrite;
-   assign src_fin = last_sa;
 
 ////////////////////// prm_v, prm_a /////////////////////////////
 
@@ -138,12 +138,14 @@ module batch_ctrl
    reg [3:0]         ic     , oc;
    reg [9:0]                           ki;
 
+   assign src_fin = last_sa | last_oc&dwconv&run;
+
    wire              wstart, wstart0, wstart1;
    wire              wrst = ~(wwrite|bwrite);
    wire              wen = src_valid&src_ready;
 
    dff #(.W(1)) d_wstart0 (.in(wwrite|bwrite), .data(wstart0), .clk(clk), .rst(wrst), .en(1'b1));
-   dff #(.W(1)) d_wstart1 (.in(wstart0), .data(wstart1), .clk(clk), .rst(wrst), .en(wen));
+   dff #(.W(1)) d_wstart1 (.in(wstart0&~(wstart1&last_oc&dwconv&run)), .data(wstart1), .clk(clk), .rst(wrst), .en(wen));
 
    assign wstart = wen&wstart0&!wstart1;
 
@@ -254,7 +256,7 @@ module out_ctrl
       end else begin
          oa <= ct*os+wi;
          outr <= outr1;     outr1 <= outr0;     outr0 <= outr00|start|pool_en;
-         outrf <= outr1&~outr0;
+         outrf <= outr1&~(outr0|start);
          update <= update1; update1 <= update0; update0 <= start;
          last_ct0 <= last_ct;
       end

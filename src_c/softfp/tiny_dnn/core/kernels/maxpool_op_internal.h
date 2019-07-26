@@ -25,7 +25,7 @@ inline void maxpool_op_internal(const tensor_t &in_data,
                                 core::maxpool_params &params,
                                 const bool layer_parallelize) {
   pst = std::chrono::high_resolution_clock::now();
-  psc = main_time;
+  //psc = main_time;
 
   if((params.pool_size_x==2)&&(params.pool_size_y==2)&&
      (params.stride_x   ==2)&&(params.stride_y   ==2)&&
@@ -67,25 +67,6 @@ inline void maxpool_op_internal(const tensor_t &in_data,
             verilator_top->src_data2 = conv16p.i;
             conv16p.f = in[idx1+1];
             verilator_top->src_data3 = conv16p.i;
-            /*
-            if(in[idx1+0]>in[idx0+0]){
-              max_value = in[idx1+0];
-              idx = idx1+0;
-            }else{
-              max_value = in[idx0];
-              idx = idx0;
-            }
-            if(in[idx0+1]>max_value){
-              max_value = in[idx0+1];
-              idx = idx0+1;
-            }
-            if(in[idx1+1]>max_value){
-              max_value = in[idx1+1];
-              idx = idx1+1;
-            }
-            max[c*oh*ow + y*ow + x] = idx;
-            out[c*oh*ow + y*ow + x] = max_value;
-            */
             eval();
           }
         }
@@ -132,7 +113,7 @@ inline void maxpool_op_internal(const tensor_t &in_data,
       });
   }
   pft += std::chrono::high_resolution_clock::now() - pst;
-  pfc += main_time - psc;
+  //pfc += main_time - psc;
 }
 
 inline void maxpool_grad_op_internal(tensor_t &prev_delta,

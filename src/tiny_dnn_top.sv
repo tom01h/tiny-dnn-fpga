@@ -9,6 +9,7 @@ module tiny_dnn_top
    input wire         wwrite,
    input wire         bwrite,
    input wire         pool,
+   input wire         dwconv,
    input wire         last,
 
    output wire        sc_s_init,
@@ -106,6 +107,7 @@ module tiny_dnn_top
       .p_fin(p_fin),
       .backprop(backprop),
       .deltaw(deltaw),
+      .dwconv(dwconv),
       .run(run),
       .pool(pool),
       .wwrite(wwrite),
@@ -266,6 +268,13 @@ module tiny_dnn_top
          assign write_data[j*4+3] = src_data3;
       end
    endgenerate
+
+   wire  write = ((wwrite|bwrite) & src_valid & src_ready & ~dwconv |
+                  (wwrite|bwrite) & src_valid & src_ready &  dwconv &  run);
+   wire dwrite =  (wwrite|bwrite) & src_valid & src_ready &  dwconv & ~run;
+   wire cexecp = (deltaw|dwconv)&execp;
+   wire cinp   = (deltaw|dwconv)&inp;
+
    generate
       genvar i;
       for (i = 0; i < f_num; i = i + 1) begin
@@ -273,14 +282,17 @@ module tiny_dnn_top
                (
                 .clk(clk),
                 .init(k_init),
-                .write((wwrite|bwrite)&(prm_v[3:0] == (i/4)) & src_valid & src_ready),
+                .write(write&(prm_v[3:0] == (i/4))),
                 .bwrite(bwrite),
+                .dwrite(dwrite&(prm_v[3:0] == (i/4))),
                 .exec(exec),
                 .outr(outr),
+                .dwconv(dwconv),
                 .update(sum_update),
                 .bias(k_fin&enbias),
-                .ra({deltaw&execp,wa[9:0]}),
-                .wa({deltaw&inp,  prm_a[9:0]}),
+                .ra({cexecp,wa[9:0]}),
+                .wa({cinp,  prm_a[9:0]}),
+                .ia({       execp,ia[9:0]}),
                 .d(d),
                 .wd(write_data[i]),
                 .sum_in(sum[i+1]),
