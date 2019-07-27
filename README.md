@@ -32,7 +32,7 @@ im2col は on the fly で実行するので、転送データとバッファメ�
 
 実装は ```examples/DW-conv``` で作成中です。課題は MNIST。  
 普通の convolution と pooling レイヤをアクセラレータ対応済みです。  
-DW-conv レイヤーをアクセラレータ対応中です。
+DW-conv レイヤーは順方向だけアクセラレータ対応済みです。
 
 
 

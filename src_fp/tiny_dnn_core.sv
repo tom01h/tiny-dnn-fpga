@@ -93,12 +93,15 @@ module tiny_dnn_core
    input wire                init,
    input wire                write,
    input wire                bwrite,
+   input wire                dwrite,
    input wire                exec,
    input wire                outr,
+   input wire                dwconv,
    input wire                update,
    input wire                bias,
    input wire [10:0]         ra,
    input wire [10:0]         wa,
+   input wire [10:0]         ia,
    input wire [15:0]         d, // bfloat16
    input wire [15:0]         wd, // bfloat16
    input wire                signi,
@@ -110,13 +113,15 @@ module tiny_dnn_core
    );
 
    parameter f_size = 1024;
+   parameter fs_size = 10;
 
    reg [15:0]         WM0 [0:f_size-1];
    reg [15:0]         WM1 [0:f_size-1];
+   reg [15:0]         WMs [0:fs_size-1];
 
    reg                init1, exec1, bias1, init2, exec2, bias2;
    reg                ra10d;
-   reg [15:0]         W10, W11, W2;
+   reg [15:0]         Ws, W10, W11, W2;
    reg [15:0]         d2;
    
 
@@ -130,9 +135,10 @@ module tiny_dnn_core
       ra10d <= ra[10];
    end
 
-   wire [9:0]     biasa = f_size-1;
-   wire [10:0]    radr = (bias)   ? {ra[10],biasa} : ra ;
-   wire [10:0]    wadr = (bwrite) ? {wa[10],biasa} : wa ;
+   wire [9:0]     biasa = (dwconv) ? fs_size-1 : f_size-1;
+   wire [10:0]    radr = (dwconv)  ? ia : (bias)   ? {ra[10],biasa} : ra ;
+   wire [10:0]    wadr = (bwrite)  ? {wa[10],biasa} : wa ;
+   wire [10:0]    dadr = (bias)    ? {ra[10],biasa} : ra ;
 
    always_ff @(posedge clk)
      if(write&~wadr[10])begin
@@ -148,15 +154,37 @@ module tiny_dnn_core
         W11 <= WM1[radr[9:0]];
      end
 
+   always_ff @(posedge clk)begin
+      if(dwrite)begin
+         WMs[wadr[3:0]] <= wd;
+      end
+      if(dwconv&(exec|bias))begin
+         Ws <= WMs[dadr[3:0]];
+      end
+   end
 
    always_ff @(posedge clk)
      if(exec1|bias1)begin
-        if(ra10d)begin
+        if(dwconv)begin
+           W2 <= Ws;
+        end else if(ra10d)begin
            W2 <= W11;
         end else begin
            W2 <= W10;
         end
-        d2 <= (exec1) ? d : 16'h3f80;
+        if(dwconv)begin
+           if(ra10d)begin
+              d2 <= W11;
+           end else begin
+              d2 <= W10;
+           end
+        end else begin
+           if(exec1)begin
+              d2 <= d ;
+           end else begin
+              d2 <= 16'h3f80;
+           end
+        end
      end
 
    wire                       signl;
