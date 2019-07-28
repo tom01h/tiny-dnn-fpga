@@ -2,6 +2,9 @@
 
 tiny-dnn の各レイヤを Zynq の PL 部に作ったアクセラレータ回路にオフロードすることで、CNN の学習を加速します。
 
+以前は [ここ](https://github.com/tom01h/tiny-dnn) で開発していました。履歴の見たい方はぜひ。  
+IP の機能以外 (DMA とか petalinux とか) を参考にしたい方は [こっち](https://github.com/tom01h/TIL/tree/master/petalinux_dma) のほうがわかりやすいと思います。
+
 オリジナルの [tiny-dnn のリポジトリ](https://github.com/tiny-dnn/tiny-dnn)
 
 ## 構成概要
@@ -32,9 +35,7 @@ im2col は on the fly で実行するので、転送データとバッファメ�
 
 実装は ```examples/DW-conv``` で作成中です。課題は MNIST。  
 普通の convolution と pooling レイヤをアクセラレータ対応済みです。  
-DW-conv レイヤーは順方向だけアクセラレータ対応済みです。
-
-
+DW-conv レイヤーは順方向と逆方向がアクセラレータ対応済みです。
 
 ![](examples/DW-conv/speed.svg)
 
