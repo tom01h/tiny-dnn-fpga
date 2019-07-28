@@ -275,6 +275,10 @@ static void train_net(const std::string &data_dir_path,
             << (dfc / 1000)
             << " us elapsed"
             << std::endl;
+  std::cout << "dwcov back "
+            << (dbc / 1000)
+            << " us elapsed"
+            << std::endl;
 
   // test and show results
   nn.test(test_images, test_labels).print_detail(std::cout);

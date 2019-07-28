@@ -357,47 +357,187 @@ void dwconv2d_op_internal(const tensor_t &prev_out,
                           const bool parallelize) {
   typedef typename vec_t::value_type float_t;
 
+  size_t iw          = params.in_padded.width_;
+  size_t ih          = params.in_padded.height_;
+  size_t id          = params.in.depth_;
+  size_t ow          = params.out.width_;
+  size_t oh          = params.out.height_;
+  size_t od          = params.in.depth_;
+  size_t kw          = params.weight.width_;
+  size_t kh          = params.weight.height_;
+  size_t ss          = (ow*oh*od+3)/4;
+  size_t ds          = (iw*ih*id+1)/2;
+
   dst = std::chrono::high_resolution_clock::now();
+  dsc = main_time;
 
-  for_i(parallelize, prev_out.size(), [&](size_t sample) {
-    // propagate delta to previous layer
-    for (size_t inc = 0; inc < params.in.depth_; inc++) {
-      size_t outc = inc;
+  verilator_top->dd = 0;
+  verilator_top->ss = ss-1;
+  verilator_top->id = 1-1;//////
+  verilator_top->is = ow*oh;
+  verilator_top->ih = oh-1;
+  verilator_top->iw = ow-1;
+  verilator_top->ds = ds-1;
+  verilator_top->od = id-1;
+  verilator_top->os = iw*ih;
+  verilator_top->oh = ih-1;
+  verilator_top->ow = iw-1;
+  verilator_top->fs = kw*kh*1-1;//////
+  verilator_top->ks = kw*kh-1;
+  verilator_top->kh = kh-1;
+  verilator_top->kw = kw-1;
 
-      size_t idx        = 0;
-      idx               = params.weight.get_index(0, 0, inc);
-      const float_t *pw = &W[idx];
+  verilator_top->backprop = 1;
+  verilator_top->dwconv = 1;
+  verilator_top->deltaw = 0;
+  verilator_top->enbias = 0;
+  verilator_top->wwrite = 0;
+  verilator_top->bwrite = 0;
+  verilator_top->run = 0;
+  verilator_top->last = 0;
+  verilator_top->src_valid = 0;
+  verilator_top->dst_ready = 1;
 
-      idx                       = params.out.get_index(0, 0, outc);
-      const float_t *pdelta_src = &curr_delta[sample][idx];
+  eval();
 
-      idx = params.in_padded.get_index(0, 0, inc);
-      // float_t* pdelta_dst = &(*prev_delta)[sample][idx];
-      float_t *pdelta_dst = &prev_delta[sample][idx];
+  verilator_top->wwrite = 1;
+  eval();
+  verilator_top->src_valid = 1;
+  for(size_t o=0;o<(id+3)/4;o++){   //id-1=veri->od
+    for(size_t i=0;i<kh*kw;i++){
+      if((o*4+0)<id){
+        conv16d.f = W[(o*4+0)*kh*kw+i];
+        verilator_top->src_data0 = conv16d.i;
+      }
+      if((o*4+1)<id){
+        conv16d.f = W[(o*4+1)*kh*kw+i];
+        verilator_top->src_data1 = conv16d.i;
+      }
+      if((o*4+2)<id){
+        conv16d.f = W[(o*4+2)*kh*kw+i];
+        verilator_top->src_data2 = conv16d.i;
+      }
+      if((o*4+3)<id){
+        conv16d.f = W[(o*4+3)*kh*kw+i];
+        verilator_top->src_data3 = conv16d.i;
+      }
+      eval();
+    }
+  }
+  verilator_top->src_valid = 0;
+  eval();
+  verilator_top->wwrite = 0;
+  eval();
 
-      for (size_t y = 0; y < params.out.height_; y++) {
-        for (size_t x = 0; x < params.out.width_; x++) {
-          const float_t *ppw = pw;
+  verilator_top->fs = ow*oh*1-1;//////
+  verilator_top->ks = ow*oh-1;//////
+  verilator_top->run = 1;
+  verilator_top->wwrite = 1;
+  eval();
+  verilator_top->src_valid = 1;
+  for(size_t o=0;o<(id+3)/4;o++){
+    for(size_t i=0;i<oh*ow;i++){
+      if((o*4+0)<id){
+        conv16d.f = curr_delta[0][(o*4+0)*oh*ow+i];
+        verilator_top->src_data0 = conv16d.i;
+      }
+      if((o*4+1)<id){
+        conv16d.f = curr_delta[0][(o*4+1)*oh*ow+i];
+        verilator_top->src_data1 = conv16d.i;
+      }
+      if((o*4+2)<id){
+        conv16d.f = curr_delta[0][(o*4+2)*oh*ow+i];
+        verilator_top->src_data2 = conv16d.i;
+      }
+      if((o*4+3)<id){
+        conv16d.f = curr_delta[0][(o*4+3)*oh*ow+i];
+        verilator_top->src_data3 = conv16d.i;
+      }
+      eval();
+    }
+  }
+  verilator_top->src_valid = 0;
+  eval();
 
-          idx                       = y * params.out.width_ + x;
-          const float_t ppdelta_src = pdelta_src[idx];
+  for (size_t sample = 0; sample < prev_out.size(); sample++){
 
-          float_t *ppdelta_dst =
-            pdelta_dst + y * params.h_stride * params.in_padded.width_ +
-            x * params.w_stride;
-
-          for (size_t wy = 0; wy < params.weight.height_; wy++) {   // NOLINT
-            for (size_t wx = 0; wx < params.weight.width_; wx++) {  // NOLINT
-              idx = wy * params.in_padded.width_ + wx;
-              ppdelta_dst[idx] += *ppw++ * ppdelta_src;
-            }
-          }
+    if(sample!=0){
+      while(!verilator_top->dst_valid){
+        eval();
+      }
+      for(size_t outa = 0; outa < iw*ih*id; ){
+        switch(outa%2){
+        case 0: convd.i = verilator_top->dst_data0;break;
+        case 1: convd.i = verilator_top->dst_data1;break;
         }
+        prev_delta[sample-1][outa] = convd.f;
+        if((outa%2)==1){
+          eval();
+        }
+        outa++;
+      }
+      if((iw*ih*id)%2){
+        eval();
       }
     }
-  });
+
+    if(sample+1<prev_out.size()){
+      verilator_top->src_valid = 1;
+      for(size_t o=0;o<(id+3)/4;o++){
+        for(size_t i=0;i<oh*ow;i++){
+          if((o*4+0)<id){
+            conv16d.f = curr_delta[sample+1][(o*4+0)*oh*ow+i];
+            verilator_top->src_data0 = conv16d.i;
+          }
+          if((o*4+1)<id){
+            conv16d.f = curr_delta[sample+1][(o*4+1)*oh*ow+i];
+            verilator_top->src_data1 = conv16d.i;
+          }
+          if((o*4+2)<id){
+            conv16d.f = curr_delta[sample+1][(o*4+2)*oh*ow+i];
+            verilator_top->src_data2 = conv16d.i;
+          }
+          if((o*4+3)<id){
+            conv16d.f = curr_delta[sample+1][(o*4+3)*oh*ow+i];
+            verilator_top->src_data3 = conv16d.i;
+          }
+          eval();
+        }
+      }
+      verilator_top->src_valid = 0;
+      eval();
+    }else{
+      verilator_top->last = 1;
+    }
+  }
+
+  while(!verilator_top->dst_valid){
+    eval();
+  }
+  for(size_t outa = 0; outa < iw*ih*id; ){
+    switch(outa%2){
+    case 0: convd.i = verilator_top->dst_data0;break;
+    case 1: convd.i = verilator_top->dst_data1;break;
+    }
+    prev_delta[prev_out.size()-1][outa] = convd.f;
+    if((outa%2)==1){
+      eval();
+    }
+    outa++;
+  }
+  if((iw*ih*id)%2){
+    eval();
+  }
+
+  verilator_top->run = 0;
+  verilator_top->wwrite = 0;
+  verilator_top->backprop = 0;
+  verilator_top->dwconv = 0;
+  verilator_top->last = 0;
+  eval();
 
   dbt += std::chrono::high_resolution_clock::now() - dst;
+  dbc += main_time - dsc;
 
   dst = std::chrono::high_resolution_clock::now();
   for_i(parallelize, prev_out.size(), [&](size_t sample) {

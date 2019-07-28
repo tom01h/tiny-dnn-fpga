@@ -292,7 +292,7 @@ module tiny_dnn_top
                 .bias(k_fin&enbias),
                 .ra({cexecp,wa[9:0]}),
                 .wa({cinp,  prm_a[9:0]}),
-                .ia({       execp,ia[9:0]}),
+                .ia({ execp,ia[9:0]}),
                 .d(d),
                 .wd(write_data[i]),
                 .sum_in(sum[i+1]),

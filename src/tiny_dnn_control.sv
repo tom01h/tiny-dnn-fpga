@@ -145,7 +145,8 @@ module batch_ctrl
    wire              wen = src_valid&src_ready;
 
    dff #(.W(1)) d_wstart0 (.in(wwrite|bwrite), .data(wstart0), .clk(clk), .rst(wrst), .en(1'b1));
-   dff #(.W(1)) d_wstart1 (.in(wstart0&~(wstart1&last_oc&dwconv&run)), .data(wstart1), .clk(clk), .rst(wrst), .en(wen));
+   dff #(.W(1)) d_wstart1 (.in(wstart0&~(wstart1&last_oc&dwconv&run)),
+                           .data(wstart1), .clk(clk), .rst(wrst), .en(wen));
 
    assign wstart = wen&wstart0&!wstart1;
 
@@ -165,7 +166,7 @@ module batch_ctrl
                         .clk(clk),   .rst(wrst),            .next(next_ki),   .en(wen)  );
 
    assign prm_v = oc;
-   assign prm_a = (backprop) ? (ic*(ks+1) + ks - ki) : ki;
+   assign prm_a = (backprop&~run) ? (ic*(ks+1) + ks - ki) : ki;
 
 endmodule
 
