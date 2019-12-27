@@ -1,0 +1,27 @@
+/include/ "system-conf.dtsi"
+/{
+    chosen {
+        bootargs = "earlycon clk_ignore_unused root=/dev/mmcblk0p2 rw rootwait  uio_pdrv_genirq.of_id=generic-uio";
+        stdout-path = "serial0:115200n8";
+    };
+    udmabuf@0 {
+        compatible = "ikwzm,udmabuf-0.10.a";
+        device-name = "udmabuf0";
+        size = <0x080000>; // 512KB
+        dma-coherent;
+    };
+    udmabuf@1 {
+        compatible = "ikwzm,udmabuf-0.10.a";
+        device-name = "udmabuf1";
+        size = <0x080000>; // 512KB
+        dma-coherent;
+    };
+};
+
+&axi_dma_0 {
+    compatible = "generic-uio";
+    dma-coherent;
+};
+&tiny_dnn_top_0 {
+    compatible = "generic-uio";
+};

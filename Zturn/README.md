@@ -28,16 +28,16 @@
 
 ## Petalinux を作る
 
-Vivado でビットストリーム込みの hdf ファイルをエクスポート、```tiny-dnn/mys-xc7z020-trd.sdk```にコピーして、
+Vivado でビットストリーム込みの xsa ファイルをエクスポート、```tiny-dnn/mys-xc7z020-trd```にコピーして、
 
 ```
-$ source /opt/pkg/petalinux/2019.1/settings.sh
+$ source /opt/pkg/petalinux/settings.sh
 $ petalinux-create --type project --template zynq --name tiny-dnn
 $ cd tiny-dnn/
-$ petalinux-config --get-hw-description=./mys-xc7z020-trd.sdk
+$ petalinux-config --get-hw-description=./mys-xc7z020-trd
 ```
 
-menuconfig の画面で ```Image Packaging Configuration ->  Root filesystem type -> SD card``` を選択する。
+menuconfig の画面で ```Image Packaging Configuration ->  Root filesystem type -> EXT(SD...)``` を選択する。
 
 ```
 $ petalinux-config -c rootfs
@@ -73,7 +73,7 @@ $ petalinux-build
 $ petalinux-package --boot --force --fsbl images/linux/zynq_fsbl.elf --fpga images/linux/system.bit --u-boot
 ```
 
-生成物は ```images/linux/BOOT.bin, image.ub, rootfs.ext4``` です。
+生成物は ```images/linux/BOOT.bin, image.ub, rootfs.tar.gz``` です。
 
 BOOT.bin,  image.ub を SDカード(FAT32) にコピーする。
 
@@ -82,12 +82,10 @@ $ cp images/linux/BOOT.bin /media/tom01h/BOOT
 $ cp images/linux/image.ub /media/tom01h/BOOT
 ```
 
-rootfs.ext4 を SDカード(ext4) にコピーする。SD カードをアンマウントして、
+rootfs.tar.gz を SDカード(ext4) にコピーする。
 
 ```
-$ sudo dd if=images/linux/rootfs.ext4 of=/dev/sdb2 bs=16M
-$ sudo sync
-$ sudo resize2fs /dev/sdb2
+$ sudo tar xvf images/linux/rootfs.tar.gz -C /media/tom01h/${mount_point}
 $ sudo sync
 ```
 
@@ -95,18 +93,24 @@ $ sudo sync
 
 対象のサンプルプログラムのディレクトリ ```examples/simple-conv,DW-conv ``` でクロスコンパイルします。
 
-**SDK の 2019.1 ではコンパイルできないようです**
+まずはクロスコンパイラを準備します。
+
+```
+$ sudo apt install g++-arm-linux-gnueabihf
+```
+
+ちなみに SDK 2019.1 の gcc は gcc-8 なのでコンパイルできないようです。
 
 CPU のみで実行する場合は
 
 ```
-$ ${SDK path}/gnu/aarch32/nt/gcc-arm-linux-gnueabi/bin/arm-linux-gnueabihf-g++.exe -O3 -mfpu=neon -mtune=cortex-a9 -mcpu=cortex-a9 -mfloat-abi=hard -Wall -Wpedantic -Wno-narrowing -Wno-deprecated -DNDEBUG -std=gnu++14 -I ../../src_c/soft -I ../../ -DDNN_USE_IMAGE_API train.cpp -o train
+$ arm-linux-gnueabihf-g++ -O3 -mfpu=neon -mtune=cortex-a9 -mcpu=cortex-a9 -mfloat-abi=hard -Wall -Wpedantic -Wno-narrowing -Wno-deprecated -DNDEBUG -std=gnu++14 -I ../../src_c/soft -I ../../ -DDNN_USE_IMAGE_API train.cpp -o train
 ```
 
 アクセラレータを使って実行する場合は
 
 ```
-$ ${SDK path}/gnu/aarch32/nt/gcc-arm-linux-gnueabi/bin/arm-linux-gnueabihf-g++.exe -O3 -mfpu=neon -mtune=cortex-a9 -mcpu=cortex-a9 -mfloat-abi=hard -Wall -Wpedantic -Wno-narrowing -Wno-deprecated -DNDEBUG -std=gnu++14 -I ../../src_c/fpga -I ../../src_c/softfp -I ../../src_c/soft -I ../../ -DDNN_USE_IMAGE_API train_z7.cpp -o train
+$ arm-linux-gnueabihf-g++ -O3 -mfpu=neon -mtune=cortex-a9 -mcpu=cortex-a9 -mfloat-abi=hard -Wall -Wpedantic -Wno-narrowing -Wno-deprecated -DNDEBUG -std=gnu++14 -I ../../src_c/fpga -I ../../src_c/softfp -I ../../src_c/soft -I ../../ -DDNN_USE_IMAGE_API train_z7.cpp -o train
 ```
 
 コンパイル済みのソフトと入力データ ```train, data/``` を SD カード(FAT32) にコピーする。
